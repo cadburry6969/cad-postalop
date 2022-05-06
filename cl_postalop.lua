@@ -11,7 +11,8 @@ local totalpayamount = 0
 local MaxDelivery = 0
 local PackageObject = nil
 local missionblip = nil
-local blip = nil 
+local PlayerJob = nil
+local isDeliverySignedIn = false
 --===================================================
 --                 CONFIG
 --===================================================
@@ -57,30 +58,47 @@ local vehicleSpawnLocations = {
  {x = -451.24,  y = -2793.8,  z = 5.96, h = 47.51},
  {x = -455.8,  y = -2798.48,  z = 5.96, h = 44.91}
 }
+
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()    
+    PlayerJob = QBCore.Functions.GetPlayerData().job
+	-- DeliveryBlipToggle()
+end)
+
+RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
+    PlayerJob = JobInfo
+	-- DeliveryBlipToggle()
+end)
 --===================================================
 --                 FUNCTIONS
 --===================================================
-function CreateBlip()
-	PostalBlip = AddBlipForCoord(-425.44, -2787.76, 6.0)
-	SetBlipSprite(PostalBlip, 478)
-	SetBlipScale(PostalBlip, 0.6)
-	SetBlipDisplay(PostalBlip, 4)
-	SetBlipColour(PostalBlip, 10)
-	SetBlipAsShortRange(PostalBlip, true)
-	BeginTextCommandSetBlipName("STRING")
-	AddTextComponentString('Postal OP')
-	EndTextCommandSetBlipName(PostalBlip)
+function DeliveryBlipToggle()
+	if onJob then
+		PostalBlip = AddBlipForCoord(-425.44, -2787.76, 6.0)
+		SetBlipSprite(PostalBlip, 478)
+		SetBlipScale(PostalBlip, 0.6)
+		SetBlipDisplay(PostalBlip, 4)
+		SetBlipColour(PostalBlip, 10)
+		SetBlipAsShortRange(PostalBlip, true)
+		BeginTextCommandSetBlipName("STRING")
+		AddTextComponentString('Postal OP')
+		EndTextCommandSetBlipName(PostalBlip)
+	else
+		if PostalBlip then
+            RemoveBlip(PostalBlip)
+        end
+	end
 end
 
-function newShift()	
+function NewDeliveryShift()	
 	if MaxDelivery >= 0 then		
 		local jobLocation = locations['LosSantos'][math.random(1, locations['LosSantos']['Max'])] 
-		SetJobBlip(jobLocation[1],jobLocation[2],jobLocation[3])
+		SetDeliveryJobBlip(jobLocation[1],jobLocation[2],jobLocation[3])
 		currentJob = jobLocation
 		currentJobPay = CalculateTravelDistanceBetweenPoints(GetEntityCoords(goPostalVehicle), currentJob[1],currentJob[2],currentJob[3])/2/4
 		if currentJobPay > 60 then 
-			currentJobPay = math.random(180, 210)
+			currentJobPay = math.random(1200, 1500)
 		end
+		QBCore.Functions.Notify("Go to next delivery point.")
 	else
 		onJob = false				
 		RemoveJobBlip()
@@ -93,7 +111,7 @@ function SpawnGoPostal(x,y,z,h)
 	local vehicleHash = GetHashKey('benson')
 	RequestModel(vehicleHash)
 	while not HasModelLoaded(vehicleHash) do
-		Citizen.Wait(0)
+		Wait(0)
 	end
 	goPostalVehicle = CreateVehicle(vehicleHash, x, y, z, h, true, false)
 	local id = NetworkGetNetworkIdFromEntity(goPostalVehicle)
@@ -118,7 +136,7 @@ function getParkingPosition(spots)
   QBCore.Functions.Notify("Parking Spots Full, Please Wait")		  
 end
 
-function SetJobBlip(x,y,z)
+function SetDeliveryJobBlip(x,y,z)
   if DoesBlipExist(missionblip) then RemoveBlip(missionblip) end
   missionblip = AddBlipForCoord(x,y,z)
   SetBlipSprite(missionblip, 164)
@@ -136,119 +154,21 @@ end
 function LoadAnim(animDict)
   RequestAnimDict(animDict)
   while not HasAnimDictLoaded(animDict) do
-    Citizen.Wait(10)
+    Wait(10)
   end
 end
 
 function LoadModel(model)
   RequestModel(model)
   while not HasModelLoaded(model) do
-    Citizen.Wait(10)
+    Wait(10)
   end
 end
-
-function ShowHelp(msg)
-    BeginTextCommandDisplayHelp('STRING')
-	AddTextComponentSubstringPlayerName(msg)
-	EndTextCommandDisplayHelp(0, false, true, -1)
-end
-
 --===================================================
 --                 JOB WORK
 --===================================================
-local isSignedIn = false
-Citizen.CreateThread(function()
-	CreateBlip()
-	while true do		
-		local inRange = false				
-		if isSignedIn then			
-			if (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), -425.44, -2787.76, 6.0, true) < 1.5) then				
-				inRange = true
-				ShowHelp("Press ~INPUT_PICKUP~ Recieve payslip and finish work")
-				if IsControlJustPressed(0, 38) then 
-					if DoesEntityExist(goPostalVehicle) then 																												
-						DeleteVehicle(goPostalVehicle)
-						RemoveJobBlip()							
-						if IsVehicleDamaged(goPostalVehicle) then
-							TriggerServerEvent('cad-delivery:cash', 200, "add")
-						else
-							TriggerServerEvent('cad-delivery:cash', 1000, "add")
-						end	  							
-						isSignedIn = false	
-						onJob = false	
-						TriggerServerEvent('cad-delivery:cash', totalpayamount, "job")	
-						Wait(500)
-						totalpayamount = 0
-					else
-						isSignedIn = false	
-						onJob = false	
-						QBCore.Functions.Notify("You wont get anything, cause you lost the delivery vehicle.")																					
-					end														
-				end				
-			end
 
-			if (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 50) and onJob and onDelivery then				
-				inRange = true
-				DrawMarker(2, currentJob[1], currentJob[2], currentJob[3], 0, 0, 0, 0, 0, 0, 0.3, 0.2, -0.2, 100, 100, 155, 255, true, true, 0,0)				
-				if (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 2.0) and onJob and onDelivery then																			
-					LoadAnim("creatures@rottweiler@tricks@")
-					TaskPlayAnim(PlayerPedId(), "creatures@rottweiler@tricks@", "petting_franklin", 8.0, 8.0, -1, 50, 0, false, false, false)					
-					Citizen.Wait(3000)
-					DeleteObject(PackageObject)
-					ClearPedTasksImmediately(PlayerPedId())
-					PackageObject = nil 
-					onDelivery = false
-					totalpayamount = totalpayamount + currentJobPay							  
-					MaxDelivery = MaxDelivery - 1						
-					newShift()					
-				end
-			end
-			if not onDelivery and onJob and not IsPedInAnyVehicle(PlayerPedId()) and GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 40 then     
-				local backside = GetEntityBoneIndexByName(goPostalVehicle, 'boot')
-				local vehiclecoords = GetWorldPositionOfEntityBone(goPostalVehicle, backside)
-				if GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), vehiclecoords.x, vehiclecoords.y, vehiclecoords.z, true) < 2.5 and PackageObject == nil then      
-					inRange = true
-					ShowHelp("Press ~INPUT_PICKUP~ Take Package")
-					if IsControlJustPressed(0, 38) then
-						LoadModel("prop_cs_cardbox_01")
-						local pos = GetEntityCoords(PlayerPedId(), false)
-						PackageObject = CreateObject(GetHashKey("prop_cs_cardbox_01"), pos.x, pos.y, pos.z, true, true, true)
-						AttachEntityToEntity(PackageObject, PlayerPedId(), GetPedBoneIndex(PlayerPedId(),  28422), 0.0, -0.03, 0.0, 5.0, 0.0, 0.0, 1, 1, 0, 1, 0, 1)
-						LoadAnim("anim@heists@box_carry@")
-						TaskPlayAnim(PlayerPedId(), "anim@heists@box_carry@", "idle", 8.0, 8.0, -1, 50, 0, false, false, false)
-						onDelivery = true
-					end
-				end 				
-			end			
-		elseif not isSignedIn then			
-			if(GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), -425.44, -2787.76, 6.0, true) < 1.5) and not onJob then
-				if not DoesEntityExist(goPostalVehicle) then 
-					inRange = true
-					ShowHelp("Press ~INPUT_PICKUP~ Start Work")
-					if IsControlJustPressed(0, 38) then 
-						if QBCore.Functions.GetPlayerData().money.cash >= 1000 then
-							local freespot, v = getParkingPosition(vehicleSpawnLocations)
-							if freespot then SpawnGoPostal(v.x, v.y, v.z, v.h) end	
-							MaxDelivery = math.random(1, 6)
-							TriggerServerEvent('cad-delivery:cash', 1000, "remove")	  
-							newShift()						
-							onJob = true
-							isSignedIn = true	
-						else
-							QBCore.Functions.Notify("No money for deposit")
-						end					
-					end
-				end
-			end					
-		end		
-		if not inRange then
-			Citizen.Wait(1000)
-		end
-		Citizen.Wait(5)
-	end
-end)
-
-Citizen.CreateThread(function()	
+CreateThread(function()
 	RequestModel(GetHashKey("s_m_m_postal_01"))
 	while not HasModelLoaded(GetHashKey("s_m_m_postal_01")) do
 		Wait(1)
@@ -261,7 +181,146 @@ Citizen.CreateThread(function()
 	SetPedCanRagdollFromPlayerImpact(ped, false)
 	SetEntityInvincible(ped, true)
 	FreezeEntityPosition(ped, true)	
+	
+	exports['qb-target']:AddTargetModel('s_m_m_postal_01', {
+		options = {
+			{ 
+				type = "client",
+				event = "cad-postalop:startwork",
+				icon = "fas fa-sign-in-alt",
+				label = "Sign In",
+				canInteract = function(entity, data)
+					if isDeliverySignedIn then return false end
+					return true
+				end,
+			},
+			{ 
+				type = "client",
+				event = "cad-postalop:finishwork",
+				icon = "fas fa-money-check-alt",
+				label = "Recieve Payment & End Work",
+				canInteract = function(entity, data)
+					if isDeliverySignedIn then return true end
+					return false
+				end,
+			},
+		},
+		distance = 1.5 
+	})
+	exports['qb-target']:AddTargetBone('boot', {
+		options = {
+			{
+			type = "client",
+			event = "cad-postalop:takepackage",
+			icon = "fas fa-box",
+			label = "Take Package",
+			canInteract = function(entity, data)
+				local ped = PlayerPedId()
+				local coords = GetEntityCoords(ped)
+				local closestVeh = QBCore.Functions.GetClosestVehicle()
+				if closestVeh ~= goPostalVehicle then return false end
+				if not onJob then return false end
+				return true
+			end,
+			}  
+		},
+		distance = 2.5,
+	})
 end)
+
+CreateThread(function()	
+	while true do		
+		local inRange = false			
+		if isDeliverySignedIn then			
+			if (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 50) and onJob and onDelivery then				
+				inRange = true
+				DrawMarker(2, currentJob[1], currentJob[2], currentJob[3], 0, 0, 0, 0, 0, 0, 0.3, 0.2, -0.2, 100, 100, 155, 255, true, true, 0,0)				
+				if (GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 1.5) and onJob and onDelivery then																			
+					LoadAnim("creatures@rottweiler@tricks@")
+					TaskPlayAnim(PlayerPedId(), "creatures@rottweiler@tricks@", "petting_franklin", 8.0, 8.0, -1, 50, 0, false, false, false)					
+					FreezeEntityPosition(PlayerPedId(), true)
+					Wait(5000)
+					DeleteObject(PackageObject)
+					FreezeEntityPosition(PlayerPedId(), false)
+					ClearPedTasksImmediately(PlayerPedId())
+					PackageObject = nil 
+					onDelivery = false
+					totalpayamount = totalpayamount + currentJobPay							  
+					MaxDelivery = MaxDelivery - 1						
+					NewDeliveryShift()					
+				end
+			end				
+		end	
+		if not inRange then
+			Wait(1000)
+		end
+		Wait(4)
+	end
+end)
+
+RegisterNetEvent('cad-postalop:startwork', function()
+	if not isDeliverySignedIn and not onJob then	
+		if not DoesEntityExist(goPostalVehicle) then 
+			if QBCore.Functions.GetPlayerData().money.cash >= 1000 then
+				local freespot, v = getParkingPosition(vehicleSpawnLocations)
+				if freespot then SpawnGoPostal(v.x, v.y, v.z, v.h) end	
+				MaxDelivery = math.random(2, 8)
+				TriggerServerEvent('cad-delivery:cash', 1000, "remove")	  
+				NewDeliveryShift()						
+				onJob = true
+				isDeliverySignedIn = true	
+				DeliveryBlipToggle()
+			else
+				QBCore.Functions.Notify("No money for deposit")
+			end	
+		end
+	else
+		QBCore.Functions.Notify("Already doing a work, finish that first")
+	end
+end)
+
+RegisterNetEvent('cad-postalop:takepackage', function()
+	if not onDelivery and onJob and not IsPedInAnyVehicle(PlayerPedId()) and GetDistanceBetweenCoords(GetEntityCoords(PlayerPedId()), currentJob[1], currentJob[2], currentJob[3], true) < 40 then     
+		LoadModel("hei_prop_heist_box")
+		local pos = GetEntityCoords(PlayerPedId(), false)
+		PackageObject = CreateObject(GetHashKey("hei_prop_heist_box"), pos.x, pos.y, pos.z, true, true, true)
+		AttachEntityToEntity(PackageObject, PlayerPedId(), GetPedBoneIndex(PlayerPedId(),  28422), 0.0, -0.03, 0.0, 5.0, 0.0, 0.0, 1, 1, 0, 1, 0, 1)
+		LoadAnim("anim@heists@box_carry@")
+		TaskPlayAnim(PlayerPedId(), "anim@heists@box_carry@", "idle", 8.0, 8.0, -1, 50, 0, false, false, false)
+		onDelivery = true				
+	end		
+end)
+
+RegisterNetEvent('cad-postalop:finishwork', function()
+	if isDeliverySignedIn then	
+		if not onJob then
+			if DoesEntityExist(goPostalVehicle) then 																												
+				DeleteVehicle(goPostalVehicle)
+				RemoveJobBlip()							
+				if IsVehicleDamaged(goPostalVehicle) then
+					TriggerServerEvent('cad-delivery:cash', 200, "add")
+				else
+					TriggerServerEvent('cad-delivery:cash', 1000, "add")
+				end	  							
+				isDeliverySignedIn = false	
+				onJob = false	
+				TriggerServerEvent('cad-delivery:cash', totalpayamount, "job")	
+				Wait(500)
+				totalpayamount = 0
+			else
+				isDeliverySignedIn = false	
+				onJob = false	
+				QBCore.Functions.Notify("You wont get anything, cause you lost the delivery vehicle.")																					
+			end	
+			DeliveryBlipToggle()
+		else
+			QBCore.Functions.Notify("You have to complete your work to recieve payment.")
+		end
+	else
+		QBCore.Functions.Notify("Sign in & work first to recieve payment.")	
+	end
+end)
+
 
 --===================================================
 --                 END
