@@ -1,5 +1,8 @@
-fx_version "bodacious"
+fx_version "cerulean"
 game "gta5"
+
+description "Postal Op Job which uses qb-target & polyzone"
+author "Cadburry#7547"
 
 server_script 'sv_postalop.lua'
 client_script 'cl_postalop.lua'
