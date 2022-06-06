@@ -13,7 +13,7 @@ AddEventHandler('cad-delivery:cash', function(currentJobPay, value)
 		Player.Functions.AddMoney("cash", currentJobPay, "postal-deposit-return")		
 		TriggerClientEvent("QBCore:Notify", _source, "Your $"..currentJobPay.." deposit was returned.")	
 	elseif value == "remove" and Player.PlayerData.money.cash >= currentJobPay then
-		Player.Functions.RemoveMoney("cash", currentJobPay, "postal-deposit-pay)		
+		Player.Functions.RemoveMoney("cash", currentJobPay, "postal-deposit-pay")		
 		TriggerClientEvent("QBCore:Notify", _source, "Your $"..currentJobPay.." was taken as deposit.")	
 	end
 end)	
