@@ -12,4 +12,4 @@ This is a job where you sign in near the postal op and put in a deposit for a tr
 - Thats all!
 
 # Support
-Join Discord: https://discord.gg/9tyjPkA6nd
+Join Discord: https://discord.gg/qxGPARNwNP
