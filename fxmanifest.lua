@@ -1,12 +1,16 @@
 fx_version "cerulean"
 game "gta5"
+lua54 'yes'
 
+author "Cadburry"
 description "Postal Op Job which uses qb-target & polyzone"
-author "Cadburry#7547"
-version "1.0.0"
+version "1.1"
 
-server_script 'sv_postalop.lua'
-client_script 'cl_postalop.lua'
+shared_scripts {
+    'config.lua',
+}
+server_script 'server.lua'
+client_script 'client.lua'
 
 files {
     'handling.meta',
