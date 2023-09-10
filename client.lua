@@ -167,7 +167,7 @@ CreateThread(function()
 				icon = "fas fa-box",
 				label = "Take Package",
 				canInteract = function(entity, data)
-					return onJob and (entity == goPostalVehicle)
+					return onJob and (GetEntityModel(entity) == GetHashKey(Config.vehicleModel))
 				end,
 			}
 		},
