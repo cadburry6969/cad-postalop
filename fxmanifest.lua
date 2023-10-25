@@ -4,7 +4,7 @@ lua54 'yes'
 
 author "Cadburry"
 description "Postal Op Job which uses qb-target & polyzone"
-version "1.1"
+version "1.2"
 
 shared_scripts {
     'config.lua',
