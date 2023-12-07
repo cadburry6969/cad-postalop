@@ -165,7 +165,6 @@ CreateThread(function()
 				event = "cad-postalop:takepackage",
 				icon = "fas fa-box",
 				distance = 2.5,
-				bones = { 'boot', 'platelight' },
 				canInteract = function(entity, data)
 					return onJob and (GetEntityModel(entity) == Config.vehicleModel)
 				end,
@@ -195,7 +194,7 @@ CreateThread(function()
 			},
 			distance = 1.5
 		})
-		exports['qb-target']:AddTargetBone('boot', {
+		exports['qb-target']:AddGlobalVehicle({
 			options = {
 				{
 					type = "client",
